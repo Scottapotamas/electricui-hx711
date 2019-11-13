@@ -11,11 +11,17 @@ export function sourceFactory(device: DeviceID): DataSource[] {
      * The load cell values
      */
     new DataSource({
-      name: 'load',
+      name: 'lA',
+    }),
+    new DataSource({
+      name: 'lB',
+    }),
+    new DataSource({
+      name: 'lC',
     }),
   ]
 }
 
 export function timeseriesFactories(device: DeviceID): TimeSeriesFactory[] {
-  return [new TimeSeriesFactory('loads', ['load'])]
+  return [new TimeSeriesFactory('loads', ['lA', 'lB', 'lC'])]
 }
