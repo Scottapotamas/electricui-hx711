@@ -1,5 +1,10 @@
 import React from 'react'
-import { Navbar, Button, Alignment } from '@blueprintjs/core'
+import {
+  Navbar,
+  Button as BlueprintButton,
+  Alignment,
+  Divider,
+} from '@blueprintjs/core'
 import { RouteComponentProps } from '@reach/router'
 import { navigate } from '@electricui/utility-electron'
 import {
@@ -7,7 +12,13 @@ import {
   useDeviceDisconnect,
   useDeviceConnectionRequested,
 } from '@electricui/components-core'
-
+import {
+  Statistic,
+  Statistics,
+  Button,
+  Slider,
+} from '@electricui/components-desktop-blueprint'
+import { CALL_CALLBACK } from '@electricui/core'
 interface InjectDeviceIDFromLocation {
   deviceID?: string
   '*'?: string // we get passed the path as the wildcard
@@ -27,7 +38,7 @@ export const Header = (
       <Navbar style={{ background: 'transparent', boxShadow: 'none' }}>
         <div style={{ margin: '0 auto', width: '100%' }}>
           <Navbar.Group align={Alignment.LEFT}>
-            <Button
+            <BlueprintButton
               minimal
               large
               icon="home"
@@ -38,7 +49,7 @@ export const Header = (
             />
 
             {connectionRequested ? (
-              <Button
+              <BlueprintButton
                 minimal
                 intent="danger"
                 icon="cross"
@@ -48,7 +59,7 @@ export const Header = (
                 }}
               />
             ) : (
-              <Button
+              <BlueprintButton
                 minimal
                 icon="link"
                 intent="success"
@@ -58,29 +69,38 @@ export const Header = (
                 }}
               />
             )}
-          </Navbar.Group>{' '}
+          </Navbar.Group>
+          <Navbar.Group style={{ textAlign: 'center' }}>
+            <div style={{ display: 'inline-block' }}>
+              Calibration Weight
+              <Slider min={0} max={10} stepSize={0.1} labelStepSize={2.5}>
+                <Slider.Handle accessor="cal_weight" />
+              </Slider>
+            </div>
+          </Navbar.Group>
           <Navbar.Group align={Alignment.RIGHT}>
             <Button
-              minimal
               large
-              icon="dashboard"
-              text="Overview"
-              onClick={() => {
-                navigate(`/devices/${props.deviceID}/`)
+              icon="changes"
+              intent="primary"
+              writer={{
+                tare_all: CALL_CALLBACK,
               }}
-              active={page === ''}
-            />
+            >
+              Tare All
+            </Button>
+            <Divider />
             <Button
-              minimal
               large
-              icon="settings"
-              text="Secondary"
-              onClick={() => {
-                navigate(`/devices/${props.deviceID}/secondary`)
+              icon="download"
+              intent="success"
+              writer={{
+                save: CALL_CALLBACK,
               }}
-              active={page === 'secondary'}
-            />
-          </Navbar.Group>{' '}
+            >
+              Save Calibration
+            </Button>
+          </Navbar.Group>
         </div>
       </Navbar>
     </div>

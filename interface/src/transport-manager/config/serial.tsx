@@ -37,7 +37,7 @@ const USB = require('@electricui/node-usb')
 
 const serialProducer = new SerialPortHintProducer({
   SerialPort,
-  baudRate: 57600,
+  baudRate: 115200,
 })
 
 const usbProducer = new USBHintProducer({
@@ -53,12 +53,12 @@ const serialTransportFactory = new TransportFactory(options => {
 
   const deliverabilityManager = new DeliverabilityManagerBinaryProtocol({
     connectionInterface,
-    timeout: 2000,
+    timeout: 1000,
   })
 
   const queryManager = new QueryManagerBinaryProtocol({
     connectionInterface,
-    timeout: 2000,
+    timeout: 1000,
   })
 
   const cobsPipeline = new COBSPipeline()
