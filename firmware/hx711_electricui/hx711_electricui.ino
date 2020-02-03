@@ -37,10 +37,8 @@ typedef struct {
 
 // Used for runtime calibration comms with UI, and saved into NV storage for persistent calibrations
 typedef struct {
-  int32_t offset;
-  int32_t slope;
-
-  uint16_t crc;
+  int32_t cal_factor;
+  uint32_t crc;
 } HX711Calibration_t;
 
 HX711HardwwareConfiguration_t scale_config[_NUM_LOADCELLS] = 
@@ -50,13 +48,12 @@ HX711HardwwareConfiguration_t scale_config[_NUM_LOADCELLS] =
   { .pin_dout = 12, .pin_sck = 11, }
 };
 
-
 HX711 scale[ _NUM_LOADCELLS ];
 
 float load_measurement[ _NUM_LOADCELLS ] = { 0.0f };
 HX711Calibration_t load_cal[ _NUM_LOADCELLS ] = { 0 };
 
-float calibration_weight_kg = 0;
+float calibration_weight_kg = 1.0f;
 
 
 // ----------- FRAM Storage ------------------
@@ -103,14 +100,15 @@ eui_message_t tracked_vars[] =
 
   // Load cell management
   EUI_FLOAT_RO_ARRAY( "load",   load_measurement ),
-  EUI_CUSTOM_ARRAY(   "cal",   load_cal ),
+  EUI_CUSTOM_ARRAY(   "cal",    load_cal         ),
 
-  EUI_UINT8( "calibrate_a", sensor_to_modify ),
-  EUI_FLOAT( "cal_weight", calibration_weight_kg ),
-  EUI_UINT8( "calibrate_b", sensor_to_modify ),
-  EUI_UINT8( "tare",     sensor_to_modify    ),
+  EUI_FLOAT( "cal_weight",  calibration_weight_kg ),
+  EUI_UINT8( "calibrate_a", sensor_to_modify      ),
+  EUI_UINT8( "calibrate_b", sensor_to_modify      ),
+  EUI_UINT8( "tare",        sensor_to_modify      ),
 
   EUI_FUNC( "tare_all", scale_tare_all    ),
+  EUI_FUNC( "save",     storage_commit    ),
 };
 
 
@@ -143,19 +141,13 @@ void crc16(uint8_t data, uint16_t *crc)
 }
 
 // Run a CRC16 against our calibration values
-uint16_t crc_calibration_values( uint32_t offset, uint32_t slope )
+uint16_t crc_calibration_values( uint32_t cal_factor )
 {
   uint16_t working_crc = 0xFFFFF; // seed is specific to the CRC16 implementation
 
   uint8_t buf[sizeof(uint32_t)] = { 0 };
-  memcpy( &buf, &offset, sizeof(uint32_t));
 
-  for(uint8_t i = 0; i < sizeof(uint32_t); i++)
-  {
-      eui_crc(buf[i], &working_crc);
-  }
-
-  memcpy( &buf, &slope, sizeof(uint32_t));
+  memcpy( &buf, &cal_factor, sizeof(uint32_t));
   for(uint8_t i = 0; i < sizeof(uint32_t); i++)
   {
       eui_crc(buf[i], &working_crc);
@@ -173,10 +165,10 @@ void storage_retrieve( void )
   // See which sensors have been calibrated
   for( uint8_t sensor = 0; sensor < _NUM_LOADCELLS; sensor++ )
   {
-    if( nv_cal[sensor].offset && nv_cal[sensor].slope )
+    if( nv_cal[sensor].cal_factor )
     {
       // There are values, so check the CRC for data integrity
-      uint16_t stored_values_crc = crc_calibration_values( nv_cal[sensor].offset, nv_cal[sensor].slope );
+      uint16_t stored_values_crc = crc_calibration_values( nv_cal[sensor].cal_factor );
 
       // If CRC's match, copy them into the userspace calibration structure
       if( nv_cal[sensor].crc == stored_values_crc)
@@ -194,7 +186,7 @@ void storage_commit( void )
   // Update the calibration CRC from the latest values
   for( uint8_t sensor = 0; sensor < _NUM_LOADCELLS; sensor++ )
   {
-    load_cal[sensor].crc = crc_calibration_values( load_cal[sensor].offset, load_cal[sensor].slope );
+    load_cal[sensor].crc = crc_calibration_values( load_cal[sensor].cal_factor );
   }
 
   // Write the calibration structure to memory
@@ -224,9 +216,9 @@ void scale_init( void )
   for( uint8_t sensor = 0; sensor < _NUM_LOADCELLS; sensor++ )
   {
     // The storage manager checks for data integrity before load, so if anything is there, use it for calibration
-    if( load_cal[sensor].offset && load_cal[sensor].slope )
+    if( load_cal[sensor].cal_factor )
     {
-      scale[sensor].set_scale( load_cal[sensor].slope );
+      scale[sensor].set_scale( load_cal[sensor].cal_factor );
       channels_calibrated++;
     }
   }
@@ -250,7 +242,7 @@ void scale_post_calibrate( uint8_t sensor )
   offset_factor = raw_reading / calibration_weight_kg;
   scale[sensor].set_scale(offset_factor);
 
-  load_cal[sensor].slope = offset_factor;
+  load_cal[sensor].cal_factor = offset_factor;
 }
 
 void scale_tare( uint8_t sensor )
