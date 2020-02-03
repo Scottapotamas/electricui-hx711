@@ -56,6 +56,8 @@ HX711 scale[ _NUM_LOADCELLS ];
 float load_measurement[ _NUM_LOADCELLS ] = { 0.0f };
 HX711Calibration_t load_cal[ _NUM_LOADCELLS ] = { 0 };
 
+float calibration_weight_kg = 0;
+
 
 // ----------- FRAM Storage ------------------
 
@@ -79,22 +81,18 @@ StorageState_t storage_info = { 0 };
 #define NV_ADDR_POWER_ON_COUNT 0x0000
 #define NV_ADDR_CALIBRATION_STRUCTURE 0x0004
 
-
-
 // ----------- Electric UI ------------------
 
 
 char system_name[] = "HX711 Tri-Axial";
 
 
-float    known_weight_a  = 0;
-float    known_weight_b  = 0;
-float    known_weight_c  = 0;
+uint8_t sensor_to_modify = 0;
 
 uint8_t   led_state  = 0;  
 uint32_t  led_timer  = 0;
 
-eui_interface_t ui_transport = EUI_INTERFACE( &serial_write ); 
+eui_interface_t ui_transport = EUI_INTERFACE_CB( &serial_write, &eui_callback ); 
 
 eui_message_t tracked_vars[] = 
 {
@@ -105,13 +103,14 @@ eui_message_t tracked_vars[] =
 
   // Load cell management
   EUI_FLOAT_RO_ARRAY( "load",   load_measurement ),
+  EUI_CUSTOM_ARRAY(   "cal",   load_cal ),
 
+  EUI_UINT8( "calibrate_a", sensor_to_modify ),
+  EUI_FLOAT( "cal_weight", calibration_weight_kg ),
+  EUI_UINT8( "calibrate_b", sensor_to_modify ),
+  EUI_UINT8( "tare",     sensor_to_modify    ),
 
-  EUI_FUNC( "calibrate", scale_calibrate ),
-
-  EUI_FUNC( "tare",     scale_tare    ),
-  EUI_FUNC( "tare_all", scale_tare    ),
-
+  EUI_FUNC( "tare_all", scale_tare_all    ),
 };
 
 
@@ -218,7 +217,7 @@ void scale_init( void )
   }
 
   // Read our stored calibration values and if valid
-  // storage_retrieve();
+  storage_retrieve();
 
   uint8_t channels_calibrated = 0;
 
@@ -236,16 +235,36 @@ void scale_init( void )
 
 }
 
-void scale_calibrate( void )
+void scale_pre_calibrate( uint8_t sensor )
 {
-
+    scale[sensor].set_scale();
+    scale[sensor].tare();
 }
 
-void scale_tare( void )
+void scale_post_calibrate( uint8_t sensor )
 {
+  float offset_factor;
+  float raw_reading;
+  
+  raw_reading = scale[sensor].get_units(10);  // average of 10 readings
+  offset_factor = raw_reading / calibration_weight_kg;
+  scale[sensor].set_scale(offset_factor);
 
+  load_cal[sensor].slope = offset_factor;
 }
 
+void scale_tare( uint8_t sensor )
+{
+  scale[sensor].tare();
+}
+
+void scale_tare_all( void )
+{
+  for( uint8_t sensor = 0; sensor < _NUM_LOADCELLS; sensor++ )
+  {
+    scale[sensor].tare();
+  }
+}
 
 void setup()
 {
@@ -259,7 +278,7 @@ void setup()
   scale_init();
   
   // Ready for use
-  scale_tare();
+  scale_tare_all();
   led_timer = millis();
 }
 
@@ -280,6 +299,59 @@ void loop()
     led_state = !led_state;
     digitalWrite( LED_BUILTIN, led_state );
     led_timer = millis();
+  }
+}
+
+void eui_callback( uint8_t message )
+{
+  switch(message)
+  {
+    case EUI_CB_TRACKED:
+    {
+      // UI recieved a tracked message ID and has completed processing
+
+      // Grab parts of the inbound packet which are are useful
+      eui_header_t header   = ui_transport.packet.header;
+      uint8_t      *name_rx = ui_transport.packet.id_in;
+      void         *payload = ui_transport.packet.data_in;
+
+      // See if the inbound packet name matches our intended variable
+      if( strcmp( (char*)name_rx, "calibrate_a" ) == 0 )
+      {
+        if( header.type == TYPE_UINT8 )
+        {
+          scale_pre_calibrate( sensor_to_modify );
+        }
+      }
+
+      if( strcmp( (char*)name_rx, "calibrate_b" ) == 0 )
+      {
+        if( header.type == TYPE_UINT8 )
+        {
+          scale_post_calibrate( sensor_to_modify );
+        }
+      }
+
+      if( strcmp( (char*)name_rx, "tare" ) == 0 )
+      {
+        if( header.type == TYPE_UINT8 )
+        {
+          scale_tare( sensor_to_modify );
+        }
+      }
+    }
+    break;
+
+    case EUI_CB_UNTRACKED:
+    {
+      // UI passed in an untracked message ID
+    }
+    break;
+
+    case EUI_CB_PARSE_FAIL:
+      // Inbound message parsing failed, this callback help while debugging
+
+    break;
   }
 }
 
