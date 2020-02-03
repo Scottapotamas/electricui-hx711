@@ -7,7 +7,6 @@ import { Header } from '../../components/Header'
 import { Intent } from '@blueprintjs/core'
 import { OverviewPage } from './OverviewPage'
 import React from 'react'
-import { SecondaryPage } from './SecondaryPage'
 import { navigate } from '@electricui/utility-electron'
 
 interface InjectDeviceIDFromLocation {
@@ -37,10 +36,7 @@ export const DevicePages = (
       <div className="device-pages">
         <Header deviceID={props.deviceID} {...props} />
         <div className="device-content">
-          <Router primary={false}>
-            <OverviewPage path="/" />
-            <SecondaryPage path="secondary" />
-          </Router>
+          <OverviewPage />
         </div>
       </div>
     </React.Fragment>
