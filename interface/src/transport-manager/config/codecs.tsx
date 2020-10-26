@@ -1,4 +1,5 @@
-import { Codec, Message, PushCallback } from '@electricui/core'
+import { Codec, Message } from '@electricui/core'
+
 import { SmartBuffer } from 'smart-buffer'
 
 export type PinAllocations = {
@@ -11,16 +12,12 @@ export class PinAllocationsCodec extends Codec {
     return message.messageID === 'pins'
   }
 
-  decode(
-    message: Message<Buffer>,
-    push: PushCallback<Message<PinAllocations[] | null>>,
-  ) {
-    // The null case
-    if (message.payload === null) {
-      return push((message as unknown) as Message<null>)
-    }
+  encode(payload: PinAllocations[]): Buffer {
+    throw new Error('Pin Allocations are read only')
+  }
 
-    const reader = SmartBuffer.fromBuffer(message.payload)
+  decode(payload: Buffer): PinAllocations[] {
+    const reader = SmartBuffer.fromBuffer(payload)
 
     const pinSettings: PinAllocations[] = []
 
@@ -33,7 +30,7 @@ export class PinAllocationsCodec extends Codec {
     }
 
     // Push it up the pipeline
-    return push(message.setPayload(pinSettings))
+    return pinSettings
   }
 }
 
@@ -48,16 +45,12 @@ export class StorageInfoCodec extends Codec {
     return message.messageID === 'nvi'
   }
 
-  decode(
-    message: Message<Buffer>,
-    push: PushCallback<Message<StorageState | null>>,
-  ) {
-    // The null case
-    if (message.payload === null) {
-      return push((message as unknown) as Message<null>)
-    }
+  encode(payload: StorageState): Buffer {
+    throw new Error('StorageInfo is read only')
+  }
 
-    const reader = SmartBuffer.fromBuffer(message.payload)
+  decode(payload: Buffer): StorageState {
+    const reader = SmartBuffer.fromBuffer(payload)
 
     const settings: StorageState = {
       power_on_count: reader.readUInt32LE(),
@@ -66,7 +59,7 @@ export class StorageInfoCodec extends Codec {
     }
 
     // Push it up the pipeline
-    return push(message.setPayload(settings))
+    return settings
   }
 }
 
@@ -96,15 +89,12 @@ export class CalibrationCodec extends Codec {
   //   return push(message.setPayload(packet.toBuffer()))
   // }
 
-  decode(
-    message: Message<Buffer>,
-    push: PushCallback<Message<CalibrationValues[] | null>>,
-  ) {
-    if (message.payload === null) {
-      return push((message as unknown) as Message<null>)
-    }
+  encode(payload: StorageState): Buffer {
+    throw new Error('Calibration is read only')
+  }
 
-    const reader = SmartBuffer.fromBuffer(message.payload)
+  decode(payload: Buffer): CalibrationValues[] {
+    const reader = SmartBuffer.fromBuffer(payload)
 
     const calibrations: CalibrationValues[] = []
 
@@ -116,7 +106,7 @@ export class CalibrationCodec extends Codec {
       calibrations.push(calibration_value)
     }
 
-    return push(message.setPayload(calibrations))
+    return calibrations
   }
 }
 

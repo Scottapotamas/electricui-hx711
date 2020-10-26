@@ -1,21 +1,22 @@
-import { Composition, Box } from 'atomic-layout'
+import { Box, Composition } from 'atomic-layout'
 import {
   IntervalRequester,
   useHardwareState,
 } from '@electricui/components-core'
-import { MessageDataSource } from '@electricui/core-timeseries'
 import React, { useContext, useState } from 'react'
-import { RouteComponentProps } from '@reach/router'
+
 import { Slider as BlueprintSlider } from '@blueprintjs/core'
 import { LoadAxisCard } from './LoadAxisCard'
+import { MessageDataSource } from '@electricui/core-timeseries'
 import { PinAllocations } from '../../../transport-manager/config/codecs'
+import { RouteComponentProps } from '@reach/router'
 import { Slider } from '@electricui/components-desktop-blueprint'
 
 export const OverviewPage = (props: RouteComponentProps) => {
   const [width, setWidth] = useState(10000)
 
-  const pins: PinAllocations[] | null = useHardwareState(state => state.pins)
-  if (pins === null) {
+  const pins = useHardwareState<PinAllocations[]>(state => state.pins)
+  if (!pins) {
     return <span>No pins</span>
   }
 
@@ -38,7 +39,7 @@ export const OverviewPage = (props: RouteComponentProps) => {
           </div>
         </Box>
         {pins.map((hx711, index) => (
-          <Box>
+          <Box key={index}>
             <LoadAxisCard sensor_index={index} graph_window_ms={width} />
           </Box>
         ))}

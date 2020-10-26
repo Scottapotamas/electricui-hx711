@@ -1,14 +1,11 @@
-require('@electricui/helpers')
-
-import { ipcRenderer } from 'electron'
-import React from 'react'
-import ReactDOM from 'react-dom'
-
-import { setupProxyServer } from '@electricui/components-core'
-
-import { deviceManager } from './config'
+import 'source-map-support/register'
 
 import { Debug } from './pages/Debug'
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { deviceManager } from './config'
+import { ipcRenderer } from 'electron'
+import { setupProxyServer } from '@electricui/components-core'
 
 const root = document.createElement('div')
 document.body.appendChild(root)
@@ -30,16 +27,14 @@ if (module.hot) {
     console.log('Hot reloading device manager configuration...')
     console.log('Tearing down old proxy server')
 
-    // tear down IPC
-    server.teardown()
-
-    // Remove all listeners from the old device manager
-    deviceManager.removeAllListeners()
+    // Prepare the device manager proxy server for a hot reload
+    const dataBundle = server.prepareForHotReload()
 
     console.log('Setting up new proxy server')
 
     // Setup the new proxy server
     server = setupProxyServer(deviceManager)
+    server.setDataForHotReload(dataBundle)
   })
 }
 

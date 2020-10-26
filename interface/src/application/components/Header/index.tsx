@@ -1,24 +1,21 @@
-import React from 'react'
 import {
-  Navbar,
-  Button as BlueprintButton,
   Alignment,
+  Button as BlueprintButton,
   Divider,
+  Navbar,
 } from '@blueprintjs/core'
+import { Button, Slider } from '@electricui/components-desktop-blueprint'
+import {
+  useDeadline,
+  useDeviceConnect,
+  useDeviceConnectionRequested,
+  useDeviceDisconnect,
+} from '@electricui/components-core'
+
+import React from 'react'
 import { RouteComponentProps } from '@reach/router'
 import { navigate } from '@electricui/utility-electron'
-import {
-  useDeviceConnect,
-  useDeviceDisconnect,
-  useDeviceConnectionRequested,
-} from '@electricui/components-core'
-import {
-  Statistic,
-  Statistics,
-  Button,
-  Slider,
-} from '@electricui/components-desktop-blueprint'
-import { CALL_CALLBACK } from '@electricui/core'
+
 interface InjectDeviceIDFromLocation {
   deviceID?: string
   '*'?: string // we get passed the path as the wildcard
@@ -30,6 +27,7 @@ export const Header = (
   const disconnect = useDeviceDisconnect()
   const connect = useDeviceConnect()
   const connectionRequested = useDeviceConnectionRequested()
+  const getDeadline = useDeadline()
 
   const page = props['*'] // we get passed the path as the wildcard, so we read it here
 
@@ -55,7 +53,7 @@ export const Header = (
                 icon="cross"
                 text="Disconnect"
                 onClick={() => {
-                  disconnect()
+                  disconnect(getDeadline())
                 }}
               />
             ) : (
@@ -65,11 +63,11 @@ export const Header = (
                 intent="success"
                 text="Connect again"
                 onClick={() => {
-                  connect()
+                  connect(getDeadline())
                 }}
               />
             )}
-          </Navbar.Group>
+          </Navbar.Group>{' '}
           <Navbar.Group style={{ textAlign: 'center' }}>
             <div style={{ display: 'inline-block' }}>
               Calibration Weight
@@ -79,25 +77,11 @@ export const Header = (
             </div>
           </Navbar.Group>
           <Navbar.Group align={Alignment.RIGHT}>
-            <Button
-              large
-              icon="changes"
-              intent="primary"
-              writer={{
-                tare_all: CALL_CALLBACK,
-              }}
-            >
+            <Button large icon="changes" intent="primary" callback="tare_all">
               Tare All
             </Button>
             <Divider />
-            <Button
-              large
-              icon="download"
-              intent="success"
-              writer={{
-                save: CALL_CALLBACK,
-              }}
-            >
+            <Button large icon="download" intent="success" callback="save">
               Save Calibration
             </Button>
           </Navbar.Group>
